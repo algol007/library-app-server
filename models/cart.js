@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
       userId: DataTypes.NUMBER,
       bookId: DataTypes.NUMBER,
       quantity: DataTypes.NUMBER,
-      status: DataTypes.BOOLEAN
+      status: DataTypes.NUMBER
     },
     {}
   );
@@ -17,8 +17,8 @@ module.exports = (sequelize, DataTypes) => {
       as: "userCart",
       sourceKey: "id"
     });
-    cart.hasMany(models.book, {
-      foreignKey: "id",
+    cart.belongsTo(models.book, {
+      foreignKey: "bookId",
       as: "bookCart",
       sourceKey: "id"
     });

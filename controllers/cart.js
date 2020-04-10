@@ -22,13 +22,33 @@ exports.createCart = (req, res, next) => {
 };
 
 exports.getAllCart = (req, res, next) => {
-  Carts.findAll({
-    attributes: {
-      exclude: ["createdAt", "updatedAt"]
+  const userId = req.params.userId;
+  Carts.findAll(
+    {
+    where: {
+      userId: userId
     },
     include: [
-      { model: Books, as: "bookCart", attributes: ["title", "image", "price"] },
-      { model: Users, as: "userCart", attributes: ["name"] }
+      { model: Users, as: "userCart", attributes: ["name"] },
+      { model: Books, as: "bookCart", attributes: ["id", "title", "image"] }
+    ]
+  })
+    .then(data => {
+      res.status(200).json({
+        carts: data
+      });
+    })
+    .catch(() => {
+      throw new ErrorHandler(500, "Internal server error");
+    });
+};
+
+exports.getAllUserCarts = (req, res, next) => {
+  Carts.findAll(
+    {
+    include: [
+      { model: Users, as: "userCart", attributes: ["name"] },
+      { model: Books, as: "bookCart", attributes: ["id", "title", "image"] }
     ]
   })
     .then(data => {
@@ -68,6 +88,7 @@ exports.getCartById = async (req, res, next) => {
   }
 };
 
+
 exports.updateCart = async (req, res, next) => {
   const cartId = req.params.cartId;
 
@@ -85,7 +106,7 @@ exports.updateCart = async (req, res, next) => {
           userId: req.body.userId,
           bookId: req.body.bookId,
           quantity: req.body.quantity,
-          total: req.body.total
+          status: req.body.status
         },
         {
           where: {
@@ -95,6 +116,39 @@ exports.updateCart = async (req, res, next) => {
       ).then(data => {
         res.status(200).json({
           message: "Cart has been updated!",
+          data: data
+        });
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.cartApproved = async (req, res, next) => {
+  const cartId = req.params.cartId;
+
+  try {
+    const cart = await Carts.findOne({
+      where: {
+        id: cartId
+      }
+    });
+    if (!cart) {
+      throw new ErrorHandler(404, "Cart not found!");
+    } else {
+      Carts.update(
+        {
+          status: req.body.status
+        },
+        {
+          where: {
+            id: cartId
+          }
+        }
+      ).then(data => {
+        res.status(200).json({
+          message: "Cart has been approved!",
           data: data
         });
       });
