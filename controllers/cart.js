@@ -23,8 +23,8 @@ exports.createCart = (req, res, next) => {
 
 exports.getAllCart = (req, res, next) => {
   const userId = req.params.userId;
-  Carts.findAll(
-    {
+  Carts.findAll({
+    order: [["createdAt", 'DESC']],
     where: {
       userId: userId
     },
@@ -44,8 +44,8 @@ exports.getAllCart = (req, res, next) => {
 };
 
 exports.getAllUserCarts = (req, res, next) => {
-  Carts.findAll(
-    {
+  Carts.findAll({
+    order: [["createdAt", 'DESC']],
     include: [
       { model: Users, as: "userCart", attributes: ["name"] },
       { model: Books, as: "bookCart", attributes: ["id", "title", "image"] }
