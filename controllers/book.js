@@ -2,8 +2,6 @@ const Books = require("../models").book;
 const Category = require("../models").category;
 const { Op } = require("sequelize");
 const { handleError, ErrorHandler } = require("../helper/error");
-// const redis = require('redis');
-// const client = redis.createClient(process.env.PORT_REDIS);
 
 // Get all books data
 exports.getAllBooks = (req, res, next) => {
@@ -113,7 +111,6 @@ exports.getAllBooks = (req, res, next) => {
       offset: offset
     })
       .then(data => {
-        // client.set('getAllBooks', JSON.stringify(data));
         const pages = Math.ceil(data.count / limit);
         if (page > pages) {
           next();

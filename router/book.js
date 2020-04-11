@@ -1,7 +1,6 @@
 module.exports = function(app) {
   const controller = require("../controllers/book");
   const auth = require('../middleware/middleware');
-  const redis = require('../helper/redis');
   const multer = require('multer');
 
   const storage = multer.diskStorage({
@@ -9,7 +8,7 @@ module.exports = function(app) {
       cb(null, './uploads/');
     },
     filename: function(req, file, cb){
-      cb(null, new Date().toISOString() + '-' + file.originalname);
+      cb(null, new Date().toISOString());
     },
   });
 
@@ -32,10 +31,7 @@ module.exports = function(app) {
 
   app.post("/api/library/admin/book", auth.authorized, upload.single('image'), controller.createBook);
   app.get("/api/library/book", controller.getAllBooks);
-  app.get(
-    "/api/library/book/category/:categoryId",
-    controller.getBooksByCategory
-  );
+  app.get("/api/library/book/category/:categoryId", controller.getBooksByCategory);
   app.get("/api/library/book/:bookId", controller.getBookById);
   app.put("/api/library/admin/book/:bookId", auth.authorized, controller.updateBook);
   app.delete("/api/library/admin/book/:bookId", auth.authorized, controller.deleteBook);
