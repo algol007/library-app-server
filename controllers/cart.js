@@ -2,6 +2,8 @@ const Carts = require("../models").cart;
 const Books = require("../models").book;
 const Users = require("../models").user;
 const { handleError, ErrorHandler } = require("../helper/error");
+const redis = require('redis');
+const client = redis.createClient(process.env.PORT_REDIS);
 
 exports.createCart = (req, res, next) => {
   Carts.create({
@@ -52,6 +54,7 @@ exports.getAllUserCarts = (req, res, next) => {
     ]
   })
     .then(data => {
+      client.setex('getAllCarts', 300, JSON.stringify(data));
       res.status(200).json({
         carts: data
       });
