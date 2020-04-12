@@ -12,7 +12,7 @@ exports.signUp = (req, res, next) => {
       name: req.body.name,
       email: req.body.email,
       password: bcrypt.hashSync(req.body.password, salt),
-      image: req.body.image,
+      image: 'http://localhost:5000/uploads/default-user.jpg',
       role: req.body.role || "user",
       isActive: 0
     })
@@ -181,8 +181,7 @@ exports.updateUser = async (req, res, next) => {
           name: req.body.name,
           email: req.body.email,
           password: bcrypt.hashSync(req.body.password, salt),
-          image: req.body.image,
-          role: req.body.user || "user",
+          image: `http://localhost:5000/uploads/${req.file.filename}`,
           isActive: 1
         },
         {

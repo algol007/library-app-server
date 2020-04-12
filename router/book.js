@@ -33,6 +33,6 @@ module.exports = function(app) {
   app.get("/api/library/book", controller.getAllBooks);
   app.get("/api/library/book/category/:categoryId", controller.getBooksByCategory);
   app.get("/api/library/book/:bookId", controller.getBookById);
-  app.put("/api/library/admin/book/:bookId", auth.authorized, controller.updateBook);
+  app.put("/api/library/admin/book/:bookId", auth.authorized, upload.single('image'), controller.updateBook);
   app.delete("/api/library/admin/book/:bookId", auth.authorized, controller.deleteBook);
 };
