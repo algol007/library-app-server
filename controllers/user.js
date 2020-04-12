@@ -32,7 +32,6 @@ exports.signUp = (req, res, next) => {
         to: req.body.email,
         subject: 'LIBRARY APP',
         html: `Click this link to activate your account <a href="http://localhost:8080/auth/login?token=${token}">Activate Account</a>`
-        // html: `Click this link to activate your account <a href="http://localhost:5000/api/library/user/activation?token=${token}">Activate Account</a>`        
       };
       
       transporter.sendMail(mailOptions, function(error, info){
