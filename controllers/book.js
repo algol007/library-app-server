@@ -234,7 +234,7 @@ exports.updateBook = async (req, res, next) => {
       Books.update(
         {
           title: req.body.title,
-          image: req.body.image,
+          image: `http://localhost:5000/uploads/${req.file.filename}`,
           author: req.body.author,
           isbn: req.body.isbn,
           isAvailable: 1,
