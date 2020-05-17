@@ -1,38 +1,11 @@
 module.exports = function(app) {
   const controller = require("../controllers/book");
   const auth = require('../middleware/middleware');
-  const multer = require('multer');
+  const upload = require('../helper/upload')
 
-  const storage = multer.diskStorage({
-    destination: function(res, file, cb){
-      cb(null, './uploads/');
-    },
-    filename: function(req, file, cb){
-      cb(null, new Date().toISOString());
-    },
-  });
-
-  const fileFilter = (req, file, cb) => {
-    const allowTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-    if(!allowTypes.includes(file.mimetype)) {
-      cb(null, false);
-    } else {
-      cb(null, true);
-    }
-  };
-
-  const upload = multer({
-    storage: storage,
-    limits: {
-      fileSize: 1024 * 1024 * 10
-    },
-    fileFilter: fileFilter,
-  });
-
-  app.post("/api/library/admin/book", auth.authorized, upload.single('image'), controller.createBook);
-  app.get("/api/library/book", controller.getAllBooks);
-  app.get("/api/library/book/category/:categoryId", controller.getBooksByCategory);
-  app.get("/api/library/book/:bookId", controller.getBookById);
-  app.put("/api/library/admin/book/:bookId", auth.authorized, upload.single('image'), controller.updateBook);
+  app.post("/api/library/admin/book", auth.authorized, upload.upload.single('image'), controller.createBook);
+  app.get("/api/library/book", controller.readAllBooks);
+  app.get("/api/library/book/:bookId", controller.readBookById);
+  app.put("/api/library/admin/book/:bookId", auth.authorized, upload.upload.single('image'), controller.updateBook);
   app.delete("/api/library/admin/book/:bookId", auth.authorized, controller.deleteBook);
 };

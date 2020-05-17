@@ -2,15 +2,19 @@ const Carts = require("../models").cart;
 const Books = require("../models").book;
 const Users = require("../models").user;
 const { handleError, ErrorHandler } = require("../helper/error");
-const redis = require('redis');
-const client = redis.createClient(process.env.PORT_REDIS);
+
+const params = {
+  include: [
+    { model: Users, as: "userCart", attributes: ["name"] },
+    { model: Books, as: "bookCart", attributes: ["id", "title", "image"] }
+  ]
+}
 
 exports.createCart = (req, res, next) => {
+  const { userId, bookId, quantity, status } = req.body
+
   Carts.create({
-    userId: req.body.userId,
-    bookId: req.body.bookId,
-    quantity: req.body.quantity,
-    status: req.body.status
+    userId, bookId, quantity, status
   })
     .then(data => {
       res.status(201).send({
@@ -18,69 +22,35 @@ exports.createCart = (req, res, next) => {
         cart: data
       });
     })
-    .catch(() => {
-      throw new ErrorHandler(500, "Internal server error");
-    });
 };
 
-exports.getAllCart = (req, res, next) => {
+exports.readAllCart = (req, res, next) => {
   const userId = req.params.userId;
-  Carts.findAll({
+
+  Carts.findAndCountAll({
     order: [["createdAt", 'DESC']],
-    where: {
-      userId: userId
-    },
-    include: [
-      { model: Users, as: "userCart", attributes: ["name"] },
-      { model: Books, as: "bookCart", attributes: ["id", "title", "image"] }
-    ]
+    where: { userId: userId },
+    params
   })
     .then(data => {
       res.status(200).json({
         carts: data
       });
     })
-    .catch(() => {
-      throw new ErrorHandler(500, "Internal server error");
-    });
 };
 
-exports.getAllUserCarts = (req, res, next) => {
-  Carts.findAll({
-    order: [["createdAt", 'DESC']],
-    include: [
-      { model: Users, as: "userCart", attributes: ["name"] },
-      { model: Books, as: "bookCart", attributes: ["id", "title", "image"] }
-    ]
-  })
-    .then(data => {
-      client.setex('getAllCarts', 300, JSON.stringify(data));
-      res.status(200).json({
-        carts: data
-      });
-    })
-    .catch(() => {
-      throw new ErrorHandler(500, "Internal server error");
-    });
-};
-
-exports.getCartById = async (req, res, next) => {
+exports.readCartById = async (req, res, next) => {
   const cartId = req.params.cartId;
 
   try {
     const cart = await Carts.findOne({
-      where: {
-        id: cartId
-      }
+      where: { id: cartId }
     });
     if (!cart) {
       throw new ErrorHandler(404, "Cart not found!");
     } else {
-      Carts.findOne({
-        where: {
-          id: cartId
-        }
-      }).then(data => {
+      Carts.findOne({ where: { id: cartId } })
+      .then(data => {
         res.status(200).json({
           data: data
         });
@@ -94,64 +64,20 @@ exports.getCartById = async (req, res, next) => {
 
 exports.updateCart = async (req, res, next) => {
   const cartId = req.params.cartId;
+  const { userId, bookId, quantity, status } = req.body
 
   try {
     const cart = await Carts.findOne({
-      where: {
-        id: cartId
-      }
+      where: { id: cartId }
     });
     if (!cart) {
       throw new ErrorHandler(404, "Cart not found!");
     } else {
-      Carts.update(
-        {
-          userId: req.body.userId,
-          bookId: req.body.bookId,
-          quantity: req.body.quantity,
-          status: req.body.status
-        },
-        {
-          where: {
-            id: cartId
-          }
-        }
-      ).then(data => {
+      Carts.update({ userId, bookId, quantity, status },
+        { where: { id: cartId } } )
+        .then(data => {
         res.status(200).json({
           message: "Cart has been updated!",
-          data: data
-        });
-      });
-    }
-  } catch (error) {
-    next(error);
-  }
-};
-
-exports.cartApproved = async (req, res, next) => {
-  const cartId = req.params.cartId;
-
-  try {
-    const cart = await Carts.findOne({
-      where: {
-        id: cartId
-      }
-    });
-    if (!cart) {
-      throw new ErrorHandler(404, "Cart not found!");
-    } else {
-      Carts.update(
-        {
-          status: req.body.status
-        },
-        {
-          where: {
-            id: cartId
-          }
-        }
-      ).then(data => {
-        res.status(200).json({
-          message: "Cart has been approved!",
           data: data
         });
       });
@@ -166,18 +92,13 @@ exports.deleteCart = async (req, res, next) => {
 
   try {
     const cart = await Carts.findOne({
-      where: {
-        id: cartId
-      }
+      where: { id: cartId }
     });
     if (!cart) {
       throw new ErrorHandler(404, "Cart not found!");
     } else {
-      Carts.destroy({
-        where: {
-          id: cartId
-        }
-      }).then(data => {
+      Carts.destroy({ where: { id: cartId } })
+      .then(data => {
         res.status(200).json({
           message: "Cart has been deleted!",
           data: data
