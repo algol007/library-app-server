@@ -1,79 +1,42 @@
-require('dotenv').config;
 const Users = require("../models").user;
-const bcrypt = require("bcryptjs");
 const { handleError, ErrorHandler } = require("../helper/error");
 const jwt = require("jsonwebtoken");
-const nodemailer = require('nodemailer'); 
+const sendEmail = require('../helper/sendEmail')
+const bcrypt = require("bcryptjs");
+const salt = bcrypt.genSaltSync(10);
 
 exports.signUp = (req, res, next) => {
-  const salt = bcrypt.genSaltSync(10);
+  const { name, email, role, isActive } = req.body
+
   Users
     .create({
-      name: req.body.name,
-      email: req.body.email,
+      name, email, role, isActive,
       password: bcrypt.hashSync(req.body.password, salt),
-      image: 'http://localhost:5000/uploads/default-user.jpg',
-      role: req.body.role || "user",
-      isActive: 0
+      image: `${process.env.BASE_URL}uploads/default-user.jpg`,
     })
     .then(data => {
       const token = jwt.sign( {id: data.id}, process.env.SECRET_KEY );
-
-      var transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.EMAIL,
-          pass: process.env.PASS,
-        }
-      });
-      
-      var mailOptions = {
-        from: process.env.EMAIL,
-        to: req.body.email,
-        subject: 'LIBRARY APP',
-        html: `Click this link to activate your account <a href="http://localhost:8080/auth/login?token=${token}">Activate Account</a>`
-      };
-      
-      transporter.sendMail(mailOptions, function(error, info){
-        if (error) {
-          console.log(error);
-        } else {
-          console.log('Email sent: ' + info.response);
-        }
-      });
-
+      sendEmail.sendMail(data.email, token)
       res.status(201).send({
         user: data.email,
         message: "User has been created!"
       });
     })
-    .catch(() => {
-      throw new ErrorHandler(500, "Internal server error");
-    });
 };
 
 exports.signIn = async (req, res, next) => {
   try{
     const user = await Users.findOne({
-      where: {
-        email: req.body.email
-      }
+      where: { email: req.body.email }
     });
     if (!user) {
       throw new ErrorHandler(403, "You are not registered! Please signup.");
     } else {
       Users
-        .findOne({
-          where: {
-            email: req.body.email
-          }
-        })
+        .findOne({ where: { email: req.body.email } })
         .then(data => {
           if (data) {
-          const authorized = bcrypt.compareSync(
-            req.body.password,
-            data.password
-          );
+          const authorized = bcrypt.compareSync( req.body.password, data.password );
           if (authorized) {
             const isActive = data.isActive;
             if(isActive == 1) {
@@ -82,47 +45,37 @@ exports.signIn = async (req, res, next) => {
                 user: data.id,
                 token: token,
                 message: "Login Successfuly!",
-              });  
+              });
             } else {
-              res.status(401).send({
-                message: "Please activate your email!",
-              });  
-            }  
+              throw new ErrorHandler(401, "Please activate your email.");
+            }
           } else {
-            res.status(401).json({
-              message: "Wrong Password!"
-            });
+            throw new ErrorHandler(401, "Wrong Password.");
           }
         }
       });
-    }        
+    }
   } catch(error) {
     console.log(error);
   }
 };
 
-exports.getUserById = async (req, res, next) => {
+exports.readUserById = async (req, res, next) => {
   const userId = req.params.userId;
 
   try {
     const user = await Users.findOne({
-      where: {
-        id: userId
-      }
+      where: { id: userId }
     });
     if (!user) {
       throw new ErrorHandler(404, "User not found!");
     } else {
-      Users.findOne({
-        where: {
-          id: userId
-        }
-      }).then(data => {
+      Users.findOne({ where: { id: userId } })
+      .then(data => {
         const token = jwt.sign( {id: data.id}, process.env.SECRET_KEY );
         res.status(200).send({
           user: data,
-          // token: token,
-        });  
+        });
       });
     }
   } catch (error) {
@@ -144,30 +97,19 @@ exports.userActivation = (req, res, next) => {
         }
       })
     }
-    Users.findOne({
-      where: {
-        id: req.userId
-      }
-    });
-    Users.update(
-      {
-        isActive: 1
-      },
-      {
-        where: {
-          id: req.userId
-        }
-      }
-    ).then(data => {
-      res.status(200).send({
+    Users.findOne({ where: { id: req.userId } });
+    Users.update({ isActive: 1 },
+      { where: { id: req.userId } })
+      .then(data => {
+        res.status(200).send({
         data: data,
       });
     });
 };
 
 exports.updateUser = async (req, res, next) => {
-  const salt = bcrypt.genSaltSync(10);
   const userId = req.params.userId;
+  const { name, email, role, isActive } = req.body
 
   try {
     const user = await Users.findOne({
@@ -176,20 +118,13 @@ exports.updateUser = async (req, res, next) => {
     if (!user) {
       throw new ErrorHandler(404, "User not found!");
     } else {
-      Users.update(
-        {
-          name: req.body.name,
-          email: req.body.email,
-          password: bcrypt.hashSync(req.body.password, salt),
-          image: `http://localhost:5000/uploads/${req.file.filename}`,
-          isActive: 1
-        },
-        {
-          where: {
-            id: userId
-          }
-        }
-      ).then(data => {
+      Users.update({
+        name, email, role, isActive,
+        password: bcrypt.hashSync(req.body.password, salt),
+        image: `${process.env.BASE_URL}uploads/${req.file.filename}`,
+      },
+      { where: {id: userId } } )
+      .then(data => {
         res.status(200).send({
           message: "User has been updated!",
           data: data
@@ -201,20 +136,13 @@ exports.updateUser = async (req, res, next) => {
   }
 };
 
-//===================For admin only========================
-
-exports.getAllUser = (req, res, next) => {
-  Users.findAll()
-    .then(data => {
-      res.status(200).send({
-        Users: data
-      });
-    })
-    .catch(err => {
-      err.status(500).json({
-        message: `Error ${err}`
-      });
+exports.readAllUser = (req, res, next) => {
+  Users.findAndCountAll()
+  .then(data => {
+    res.status(200).send({
+      Users: data
     });
+  })
 };
 
 exports.deleteUser = async (req, res, next) => {
@@ -222,18 +150,13 @@ exports.deleteUser = async (req, res, next) => {
 
   try {
     const user = await Users.findOne({
-      where: {
-        id: userId
-      }
+      where: { id: userId }
     });
     if (!user) {
       throw new ErrorHandler(404, "User not found!");
     } else {
-      Users.destroy({
-        where: {
-          id: userId
-        }
-      }).then(data => {
+      Users.destroy({ where: { id: userId } })
+      .then(data => {
         res.status(200).send({
           message: "User has been deleted!",
           data: data

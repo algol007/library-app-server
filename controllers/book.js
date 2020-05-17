@@ -3,165 +3,92 @@ const Category = require("../models").category;
 const { Op } = require("sequelize");
 const { handleError, ErrorHandler } = require("../helper/error");
 
-// Get all books data
-exports.getAllBooks = (req, res, next) => {
-  // console.log("Get all books data");
-  const orderByTitle = req.query.title;
-  const orderByAuthor = req.query.author;
-  const orderByYear = req.query.year;
-  const search = req.query.search;
-  const limit = 8;
-  const page = req.query.page;
-  let offset = (page - 1) * limit;
+const params = {
+  exclude: ["createdAt", "updatedAt"],
+  include: { model: Category, as: "bookCategory", attributes: ["name"] }
+}
 
-  if (orderByTitle) {
-    Books.findAndCountAll({
-      order: [["title", orderByTitle]],
-      exclude: ["createdAt", "updatedAt"],
-      include: { model: Category, as: "bookCategory", attributes: ["name"] },
-      limit: limit,
-      offset: offset
-    })
-      .then(data => {
-        const pages = Math.ceil(data.count / limit);
-        if (page > pages) {
-          next();
-        } else {
-          res.status(200).send({
-            // page: `${page} of ${pages}`,
-            message: "Order book by title",
-            books: data
-          });
-        }
-      })
-      .catch(() => {
-        throw new ErrorHandler(500, "Internal server error");
+/**
+ * ? search is String
+ * ? author,title,search,year is Number
+ */
+exports.readAllBooks = (req, res, next) => {
+  const { author, title, search, year } = req.query;
+
+  const limit = req.query.limit || 8;
+  const page = req.query.page || 1;
+  const offset = (page - 1) * limit;
+
+  const response = (data) => {
+    const pages = Math.ceil(data.count / limit);
+    if (page > pages) {
+      next();
+    } else {
+      res.status(200).send({
+        limit: limit,
+        offset: offset,
+        page: `${page} of ${pages}`,
+        books: data
       });
-  } else if (orderByAuthor) {
+    }
+  }
+
+  if (search) {
     Books.findAndCountAll({
-      order: [["author", orderByAuthor]],
-      exclude: ["createdAt", "updatedAt"],
-      include: { model: Category, as: "bookCategory", attributes: ["name"] },
-      limit: limit,
-      offset: offset
+      where: { [Op.or]: [{ title: { [Op.substring]: search } }] },
+      offset: offset,
+      params
     })
-      .then(data => {
-        const pages = Math.ceil(data.count / limit);
-        if (page > pages) {
-          next();
-        } else {
-          res.status(200).send({
-            // page: `${page} of ${pages}`,
-            message: "Order book by author",
-            books: data
-          });
-        }
-      })
-      .catch(() => {
-        throw new ErrorHandler(500, "Internal server error");
-      });
-  } else if (orderByYear) {
+    .then(data => response(data))
+  } else if (author) {
     Books.findAndCountAll({
-      order: [["publishedAt", orderByYear]],
-      exclude: ["createdAt", "updatedAt"],
-      include: { model: Category, as: "bookCategory", attributes: ["name"] },
-      limit: limit,
-      offset: offset
+      order: [["author", author]],
+      offset: offset,
+      params
     })
-      .then(data => {
-        const pages = Math.ceil(data.count / limit);
-        if (page > pages) {
-          next();
-        } else {
-          res.status(200).send({
-            page: `${page} of ${pages}`,
-            message: "Order book by year",
-            books: data
-          });
-        }
-      })
-      .catch(() => {
-        throw new ErrorHandler(500, "Internal server error");
-      });
-  } else if (search) {
+    .then(data => response(data))
+  } else if (title) {
     Books.findAndCountAll({
-      where: {
-        [Op.or]: [
-          { title: { [Op.substring]: search } },
-          { description: { [Op.substring]: search } }
-        ]
-      },
-      exclude: ["createdAt", "updatedAt"],
-      include: { model: Category, as: "bookCategory", attributes: ["name"] }
+      order: [["title", title]],
+      offset: offset,
+      params
     })
-      .then(data => {
-        res.status(200).send({
-          message: "Search books",
-          books: data
-        });
-      })
-      .catch(() => {
-        throw new ErrorHandler(500, "Internal server error");
-      });
-  } else if (page) {
+    .then(data => response(data))
+  } else if (year) {
     Books.findAndCountAll({
-      exclude: ["createdAt", "updatedAt"],
-      include: { model: Category, as: "bookCategory", attributes: ["name"] },
-      limit: limit,
-      offset: offset
+      order: [["publishedAt", year]],
+      offset: offset,
+      params
     })
-      .then(data => {
-        const pages = Math.ceil(data.count / limit);
-        if (page > pages) {
-          next();
-        } else {
-          res.status(200).send({
-            page: `${page} of ${pages}`,
-            books: data
-          });
-        }
-      })
-      .catch(() => {
-        throw new ErrorHandler(500, "Internal server error");
-      });
+    .then(data => response(data))
   } else {
     Books.findAndCountAll({
-      exclude: ["createdAt", "updatedAt"],
-      include: { model: Category, as: "bookCategory", attributes: ["name"] },
+      order: [["createdAt", 'DESC']],
+      offset: offset,
+      params
     })
-      .then(data => {
-        res.status(200).send({
-          books: data
-        });
-      })
-      .catch(() => {
-        throw new ErrorHandler(500, "Internal server error");
-      });
+    .then(data => response(data))
   }
 };
 
-exports.getBookById = async (req, res, next) => {
-  // console.log("Get book data by Id");
+/**
+ * @param bookId is Number
+ */
+exports.readBookById = async (req, res, next) => {
   const bookId = req.params.bookId;
   try {
     const book = await Books.findOne({
-      where: {
-        id: bookId
-      }
+      where: { id: bookId }
     });
     if (!book) {
       throw new ErrorHandler(404, "Book not found!");
     } else {
       Books.findOne({
-        where: {
-          id: bookId
-        },
-        exclude: ["createdAt", "updatedAt"],
-        include: { model: Category, as: "bookCategory", attributes: ["name"] },
-        }).then(data => {
-        res.status(200).json({
-          data: data
-        });
+        where: { id: bookId },
+        params
+      })
+      .then(data => {
+        res.status(200).json({ data: data });
       });
     }
   } catch (error) {
@@ -169,44 +96,17 @@ exports.getBookById = async (req, res, next) => {
   }
 };
 
-exports.getBooksByCategory = (req, res, next) => {
-  // console.log("Get all books data");
-  const categoryId = req.params.categoryId;
-
-  Books.findAll({
-    attributes: {
-      exclude: ["createdAt", "updatedAt"]
-    },
-    where: {
-      categoryId: categoryId
-    }
-  })
-    .then(data => {
-      res.status(200).send({
-        books: data
-        // message: orderByTitle
-      });
-    })
-    .catch(() => {
-      throw new ErrorHandler(500, "Internal server error");
-    });
-};
-
+/**
+ * @param price,publishedAt,totalPage,categoryId is Number
+ * @param title,author,isbn,description,language,publishedBy is String
+ */
 exports.createBook = (req, res, next) => {
+  const { title, author, isbn, totalPage, categoryId, price, description, language, publishedAt, publishedBy } = req.body;
+
   Books.create({
-    title: req.body.title,
-    image: `http://localhost:5000/uploads/${req.file.filename}`,
-    // image: req.image,
-    author: req.body.author,
-    isbn: req.body.isbn,
+    image: `${process.env.BASE_URL}uploads/${req.file.filename}`,
     isAvailable: 1,
-    totalPage: req.body.totalPage,
-    categoryId: req.body.categoryId,
-    price: req.body.price,
-    description: req.body.description,
-    language: req.body.language,
-    publishedBy: req.body.publishedBy,
-    publishedAt: req.body.publishedAt
+    title, author, isbn, totalPage, categoryId, price, description, language, publishedBy, publishedAt
   })
     .then(data => {
       res.status(201).send({
@@ -214,44 +114,30 @@ exports.createBook = (req, res, next) => {
         data: data
       });
     })
-    .catch(() => {
-      throw new ErrorHandler(500, "Internal server error");
-    });
 };
 
+/**
+ * @param price,publishedAt,totalPage,categoryId is Number
+ * @param title,author,isbn,description,language,publishedBy is String
+ */
 exports.updateBook = async (req, res, next) => {
   const bookId = req.params.bookId;
-  // console.log(eventName);
+  const { title, author, isbn, totalPage, categoryId, price, description, language, publishedAt, publishedBy } = req.body;
+
   try {
     const book = await Books.findOne({
-      where: {
-        id: bookId
-      }
+      where: { id: bookId }
     });
     if (!book) {
       throw new ErrorHandler(404, "Book not found!");
     } else {
-      Books.update(
-        {
-          title: req.body.title,
-          image: `http://localhost:5000/uploads/${req.file.filename}`,
-          author: req.body.author,
-          isbn: req.body.isbn,
-          isAvailable: 1,
-          totalPage: req.body.totalPage,
-          categoryId: req.body.categoryId,
-          price: req.body.price,
-          description: req.body.description,
-          language: req.body.language,
-          publishedBy: req.body.publishedBy,
-          publishedAt: req.body.publishedAt
-        },
-        {
-          where: {
-            id: bookId
-          }
-        }
-      ).then(data => {
+      Books.update({
+        image: `${process.env.BASE_URL}uploads/${req.file.filename}`,
+        isAvailable: 1,
+        title, author, isbn, totalPage, categoryId, price, description, language, publishedBy, publishedAt
+      },
+      { where: { id: bookId } })
+      .then(data => {
         res.status(200).send({
           message: "Book has been updated!",
           data: data
@@ -263,23 +149,20 @@ exports.updateBook = async (req, res, next) => {
   }
 };
 
+/**
+ * @param bookId is Number
+ */
 exports.deleteBook = async (req, res, next) => {
   const bookId = req.params.bookId;
-  // console.log(eventName);
   try {
     const book = await Books.findOne({
-      where: {
-        id: bookId
-      }
+      where: { id: bookId }
     });
     if (!book) {
       throw new ErrorHandler(404, "Book not found!");
     } else {
-      Books.destroy({
-        where: {
-          id: bookId
-        }
-      }).then(data => {
+      Books.destroy({ where: { id: bookId } })
+      .then(data => {
         res.status(200).send({
           message: "Book has been deleted!",
           data: data
