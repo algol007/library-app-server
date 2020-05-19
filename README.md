@@ -5,7 +5,7 @@
 ![GitHub contributors](https://img.shields.io/github/contributors/algol007/arkademy-week5.server)
 ![GitHub stars](https://img.shields.io/github/stars/algol007/arkademy-week5.server?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/algol007/arkademy-week5.server?style=social)
-)
+
 <p align="center">
   <a href="https://nodejs.org/">
     <img src="https://cdn-images-1.medium.com/max/871/1*d2zLEjERsrs1Rzk_95QU9A.png">
