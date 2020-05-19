@@ -15,8 +15,6 @@
 ## Table of Contents
 - [Prerequiste](#prerequiste)
 - [Instalation](#installation)
-- [Link Collection Postman](#link-collection-postman)
-- [Structure Folder](#structure-folder)
 - [Contributing](#contributing)
 
 ## Prerequiste
