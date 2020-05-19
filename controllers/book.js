@@ -37,6 +37,7 @@ exports.readAllBooks = (req, res, next) => {
     Books.findAndCountAll({
       where: { [Op.or]: [{ title: { [Op.substring]: search } }] },
       offset: offset,
+      limit: limit,
       params
     })
     .then(data => response(data))
@@ -44,6 +45,7 @@ exports.readAllBooks = (req, res, next) => {
     Books.findAndCountAll({
       order: [["author", author]],
       offset: offset,
+      limit: limit,
       params
     })
     .then(data => response(data))
@@ -51,6 +53,7 @@ exports.readAllBooks = (req, res, next) => {
     Books.findAndCountAll({
       order: [["title", title]],
       offset: offset,
+      limit: limit,
       params
     })
     .then(data => response(data))
@@ -58,6 +61,7 @@ exports.readAllBooks = (req, res, next) => {
     Books.findAndCountAll({
       order: [["publishedAt", year]],
       offset: offset,
+      limit: limit,
       params
     })
     .then(data => response(data))
@@ -65,6 +69,7 @@ exports.readAllBooks = (req, res, next) => {
     Books.findAndCountAll({
       order: [["createdAt", 'DESC']],
       offset: offset,
+      limit: limit,
       params
     })
     .then(data => response(data))
@@ -84,11 +89,12 @@ exports.readBookById = async (req, res, next) => {
       throw new ErrorHandler(404, "Book not found!");
     } else {
       Books.findOne({
-        where: { id: bookId },
-        params
+        exclude: ["createdAt", "updatedAt"],
+        include: { model: Category, as: "bookCategory", attributes: ["name"] },
+        where: { id: bookId }
       })
       .then(data => {
-        res.status(200).json({ data: data });
+        res.status(200).json({ book: data });
       });
     }
   } catch (error) {
