@@ -3,13 +3,6 @@ const Books = require("../models").book;
 const Users = require("../models").user;
 const { handleError, ErrorHandler } = require("../helper/error");
 
-const params = {
-  include: [
-    { model: Users, as: "userCart", attributes: ["name"] },
-    { model: Books, as: "bookCart", attributes: ["id", "title", "image"] }
-  ]
-}
-
 exports.createCart = (req, res, next) => {
   const { userId, bookId, quantity, status } = req.body
 
@@ -25,12 +18,12 @@ exports.createCart = (req, res, next) => {
 };
 
 exports.readAllCart = (req, res, next) => {
-  const userId = req.params.userId;
-
   Carts.findAndCountAll({
     order: [["createdAt", 'DESC']],
-    where: { userId: userId },
-    params
+    include: [
+      { model: Users, as: "userCart", attributes: ["name"] },
+      { model: Books, as: "bookCart", attributes: ["id", "title", "image"] }
+    ],
   })
     .then(data => {
       res.status(200).json({
@@ -39,26 +32,22 @@ exports.readAllCart = (req, res, next) => {
     })
 };
 
-exports.readCartById = async (req, res, next) => {
-  const cartId = req.params.cartId;
+exports.readCartById = (req, res, next) => {
+  const userId = req.params.userId;
 
-  try {
-    const cart = await Carts.findOne({
-      where: { id: cartId }
-    });
-    if (!cart) {
-      throw new ErrorHandler(404, "Cart not found!");
-    } else {
-      Carts.findOne({ where: { id: cartId } })
-      .then(data => {
-        res.status(200).json({
-          data: data
-        });
+  Carts.findAndCountAll({
+    order: [["createdAt", 'DESC']],
+    include: [
+      { model: Users, as: "userCart", attributes: ["name"] },
+      { model: Books, as: "bookCart", attributes: ["id", "title", "image"] }
+    ],
+    where: { userId: userId },
+  })
+    .then(data => {
+      res.status(200).json({
+        carts: data
       });
-    }
-  } catch (error) {
-    next(error);
-  }
+    })
 };
 
 
@@ -73,7 +62,7 @@ exports.updateCart = async (req, res, next) => {
     if (!cart) {
       throw new ErrorHandler(404, "Cart not found!");
     } else {
-      Carts.update({ userId, bookId, quantity, status },
+      Carts.update({ status: req.body.status },
         { where: { id: cartId } } )
         .then(data => {
         res.status(200).json({
