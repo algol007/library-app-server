@@ -30,7 +30,10 @@ exports.signIn = async (req, res, next) => {
       where: { email: req.body.email }
     });
     if (!user) {
-      throw new ErrorHandler(403, "You are not registered! Please signup.");
+      res.status(200).send({
+        status: 404,
+        message: "You are not registered!",
+      });
     } else {
       Users
         .findOne({ where: { email: req.body.email } })
@@ -47,10 +50,16 @@ exports.signIn = async (req, res, next) => {
                 message: "Login Successfuly!",
               });
             } else {
-              throw new ErrorHandler(401, "Please activate your email.");
+              res.status(200).send({
+                status: 401,
+                message: "Please activate your email!",
+              });
             }
           } else {
-            throw new ErrorHandler(401, "Wrong Password.");
+            res.status(200).send({
+              status: 402,
+              message: "Wrong Password!",
+            });
           }
         }
       });
